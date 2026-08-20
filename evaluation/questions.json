@@ -1,0 +1,156 @@
+[
+  {
+    "id": 1,
+    "type": "text",
+    "question": "What are the primary functions of the respiratory system?"
+  },
+  {
+    "id": 2,
+    "type": "text",
+    "question": "What is the difference between the conducting zone and respiratory zone?"
+  },
+  {
+    "id": 3,
+    "type": "text",
+    "question": "What is the role of type I and type II pneumocytes?"
+  },
+  {
+    "id": 4,
+    "type": "text",
+    "question": "Explain the basic sequence of quiet inspiration."
+  },
+  {
+    "id": 5,
+    "type": "text",
+    "question": "Why is quiet expiration normally passive?"
+  },
+  {
+    "id": 6,
+    "type": "text",
+    "question": "What does Boyle's law explain in the mechanics of breathing?"
+  },
+  {
+    "id": 7,
+    "type": "text",
+    "question": "What is pulmonary compliance and how does it differ in emphysema and pulmonary fibrosis?"
+  },
+  {
+    "id": 8,
+    "type": "text",
+    "question": "What is the role of surfactant in the lungs?"
+  },
+  {
+    "id": 9,
+    "type": "text",
+    "question": "What are tidal volume, inspiratory reserve volume, expiratory reserve volume, and residual volume?"
+  },
+  {
+    "id": 10,
+    "type": "text",
+    "question": "What is the formula for alveolar ventilation?"
+  },
+
+  {
+    "id": 11,
+    "type": "text",
+    "question": "What is the difference between ventilation and perfusion?"
+  },
+  {
+    "id": 12,
+    "type": "text",
+    "question": "Why is the V/Q ratio higher at the apex of the lung than at the base?"
+  },
+  {
+    "id": 13,
+    "type": "text",
+    "question": "What is the difference between low V/Q and high V/Q?"
+  },
+  {
+    "id": 14,
+    "type": "text",
+    "question": "How does oxygen move from the alveoli into the blood?"
+  },
+  {
+    "id": 15,
+    "type": "text",
+    "question": "Why is the oxygen-hemoglobin dissociation curve sigmoid shaped?"
+  },
+
+  {
+    "id": 16,
+    "type": "image",
+    "question": "What does the lung volume spirogram in the document illustrate?"
+  },
+  {
+    "id": 17,
+    "type": "image",
+    "question": "What does the V/Q diagram show about ventilation and perfusion in different regions of the lung?"
+  },
+  {
+    "id": 18,
+    "type": "image",
+    "question": "What does the diagram of inspiration show about changes in thoracic volume and pressure?"
+  },
+  {
+    "id": 19,
+    "type": "image",
+    "question": "What does the oxygen-hemoglobin dissociation curve in the document show?"
+  },
+  {
+    "id": 20,
+    "type": "image",
+    "question": "What does the gas exchange diagram illustrate about the movement of oxygen and carbon dioxide?"
+  },
+
+  {
+    "id": 21,
+    "type": "multimodal",
+    "question": "Using both the text and the V/Q diagram, explain why V/Q is higher at the lung apex."
+  },
+  {
+    "id": 22,
+    "type": "multimodal",
+    "question": "Using the text and the spirogram, explain the different lung volumes shown in the document."
+  },
+  {
+    "id": 23,
+    "type": "multimodal",
+    "question": "Using the text and the oxygen-hemoglobin curve, explain why a right shift facilitates oxygen unloading."
+  },
+  {
+    "id": 24,
+    "type": "multimodal",
+    "question": "Using the gas exchange diagram and the accompanying text, explain how oxygen and carbon dioxide move across the alveolar-capillary membrane."
+  },
+  {
+    "id": 25,
+    "type": "multimodal",
+    "question": "Using the document's text and diagrams, explain the complete pathway from air entering the lungs to oxygen being delivered to tissues."
+  },
+
+  {
+    "id": 26,
+    "type": "unanswerable",
+    "question": "What is the patient's blood pressure?"
+  },
+  {
+    "id": 27,
+    "type": "unanswerable",
+    "question": "What medication dosage was prescribed to the patient?"
+  },
+  {
+    "id": 28,
+    "type": "unanswerable",
+    "question": "What was the patient's age and weight?"
+  },
+  {
+    "id": 29,
+    "type": "unanswerable",
+    "question": "What was the patient's oxygen saturation during hospitalization?"
+  },
+  {
+    "id": 30,
+    "type": "unanswerable",
+    "question": "What was the patient's blood test result?"
+  }
+]

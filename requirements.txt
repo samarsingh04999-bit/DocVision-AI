@@ -1,0 +1,13 @@
+pymupdf
+langchain
+langchain-community
+langchain-core
+langchain-google-genai
+langchain-text-splitters
+transformers
+torch
+numpy
+pillow
+python-dotenv
+faiss-cpu
+streamlit 
