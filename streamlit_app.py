@@ -2,6 +2,10 @@ import streamlit as st
 import tempfile
 import os
 
+# Load API key from Streamlit Secrets
+if "GEMINI_API_KEY" in st.secrets:
+    os.environ["GEMINI_API_KEY"] = st.secrets["GEMINI_API_KEY"]
+
 # Import our RAG functions
 from app import (
     process_pdf,
