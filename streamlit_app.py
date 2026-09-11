@@ -2,10 +2,10 @@ import streamlit as st
 import tempfile
 import os
 
-# Import our existing RAG functions
+# Import our RAG functions
 from app import (
     process_pdf,
-    create_vector_store,
+    create_vector_stores,
     multimodal_rag
 )
 
@@ -56,9 +56,14 @@ with st.sidebar:
 # SESSION STATE
 # ============================================================
 
-if "vector_store" not in st.session_state:
+if "text_vector_store" not in st.session_state:
 
-    st.session_state.vector_store = None
+    st.session_state.text_vector_store = None
+
+
+if "image_vector_store" not in st.session_state:
+
+    st.session_state.image_vector_store = None
 
 
 if "image_data_store" not in st.session_state:
@@ -102,14 +107,13 @@ if process_button:
                     uploaded_file.getbuffer()
                 )
 
-                temp_pdf_path = (
-                    temp_file.name
-                )
+                temp_pdf_path = temp_file.name
+
 
             try:
 
                 # ------------------------------------------------
-                # EXISTING RAG PIPELINE
+                # PROCESS PDF
                 # ------------------------------------------------
 
                 (
@@ -120,23 +124,30 @@ if process_button:
                     temp_pdf_path
                 )
 
+
                 # ------------------------------------------------
-                # CREATE FAISS INDEX
+                # CREATE SEPARATE FAISS STORES
                 # ------------------------------------------------
 
-                vector_store = (
-                    create_vector_store(
-                        all_docs,
-                        embeddings_array
-                    )
+                (
+                    text_vector_store,
+                    image_vector_store
+                ) = create_vector_stores(
+                    all_docs,
+                    embeddings_array
                 )
+
 
                 # ------------------------------------------------
                 # STORE IN STREAMLIT SESSION
                 # ------------------------------------------------
 
-                st.session_state.vector_store = (
-                    vector_store
+                st.session_state.text_vector_store = (
+                    text_vector_store
+                )
+
+                st.session_state.image_vector_store = (
+                    image_vector_store
                 )
 
                 st.session_state.image_data_store = (
@@ -145,9 +156,11 @@ if process_button:
 
                 st.session_state.processed = True
 
+
                 st.success(
                     "PDF processed successfully!"
                 )
+
 
             finally:
 
@@ -199,6 +212,7 @@ if st.session_state.processed:
         type="primary"
     )
 
+
     # ========================================================
     # ASK QUESTION
     # ========================================================
@@ -221,7 +235,8 @@ if st.session_state.processed:
 
                     answer = multimodal_rag(
                         query,
-                        st.session_state.vector_store,
+                        st.session_state.text_vector_store,
+                        st.session_state.image_vector_store,
                         st.session_state.image_data_store
                     )
 
@@ -232,6 +247,7 @@ if st.session_state.processed:
                     st.write(
                         answer
                     )
+
 
                 except Exception as e:
 

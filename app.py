@@ -1,7 +1,5 @@
 # ============================================================
-# MULTIMODAL PDF RAG - BASELINE
-#
-# Based on the original multimodal RAG notebook
+# MULTIMODAL PDF RAG - V2
 #
 # Pipeline:
 #
@@ -11,9 +9,11 @@
 #   ↓
 # CLIP Text/Image Embeddings
 #   ↓
-# FAISS
+# Separate FAISS Stores
+#   ├── Text FAISS
+#   └── Image FAISS
 #   ↓
-# Retrieve Text + Images
+# Retrieve Text + Images independently
 #   ↓
 # Gemini
 #   ↓
@@ -66,18 +66,16 @@ if not GEMINI_API_KEY:
 # 3. CONFIGURATION
 # ============================================================
 
-PDF_PATH = "data/sample.pdf"
+PDF_PATH = "data/RS.pdf"
 
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 100
 
-TOP_K = 5
+TEXT_TOP_K = 5
+IMAGE_TOP_K = 5
 
 CLIP_MODEL_NAME = "openai/clip-vit-base-patch32"
 
-# CHANGED FROM ORIGINAL NOTEBOOK:
-# Original notebook used GPT-4.1.
-# We are using Gemini because you don't have OpenAI API access.
 GEMINI_MODEL_NAME = "gemini-3.5-flash-lite"
 
 
@@ -121,18 +119,6 @@ def embed_text(text):
     )
 
     with torch.no_grad():
-
-        # ----------------------------------------------------
-        # IMPORTANT:
-        #
-        # Instead of using get_text_features(), we explicitly
-        # run the CLIP text encoder and then apply the
-        # text projection.
-        #
-        # This avoids the Transformers-version issue you were
-        # getting where get_text_features() returned a
-        # BaseModelOutputWithPooling object.
-        # ----------------------------------------------------
 
         text_outputs = clip_model.text_model(
             input_ids=inputs["input_ids"],
@@ -185,17 +171,12 @@ def embed_image(image_data):
 
     with torch.no_grad():
 
-        # ----------------------------------------------------
-        # Run CLIP vision encoder
-        # ----------------------------------------------------
-
         vision_outputs = clip_model.vision_model(
             pixel_values=inputs["pixel_values"]
         )
 
         pooled_output = vision_outputs.pooler_output
 
-        # Apply CLIP visual projection
         features = clip_model.visual_projection(
             pooled_output
         )
@@ -242,6 +223,7 @@ def process_pdf(pdf_path):
         chunk_overlap=CHUNK_OVERLAP
     )
 
+
     # ========================================================
     # LOOP THROUGH PDF PAGES
     # ========================================================
@@ -251,6 +233,7 @@ def process_pdf(pdf_path):
         print(
             f"Processing page {page_number + 1}..."
         )
+
 
         # ====================================================
         # TEXT EXTRACTION
@@ -288,6 +271,7 @@ def process_pdf(pdf_path):
                     chunk
                 )
 
+
         # ====================================================
         # IMAGE EXTRACTION
         # ====================================================
@@ -323,6 +307,7 @@ def process_pdf(pdf_path):
                     f"_image_{image_index + 1}"
                 )
 
+
                 # ------------------------------------------------
                 # Store image as base64
                 # ------------------------------------------------
@@ -342,6 +327,7 @@ def process_pdf(pdf_path):
                     image_id
                 ] = image_base64
 
+
                 # ------------------------------------------------
                 # Create CLIP image embedding
                 # ------------------------------------------------
@@ -353,6 +339,7 @@ def process_pdf(pdf_path):
                 all_embeddings.append(
                     embedding
                 )
+
 
                 # ------------------------------------------------
                 # Create document representing image
@@ -373,6 +360,11 @@ def process_pdf(pdf_path):
                     image_doc
                 )
 
+                print(
+                    f"IMAGE ADDED: {image_id} | "
+                    f"Page {page_number + 1}"
+                )
+
             except Exception as e:
 
                 print(
@@ -382,7 +374,9 @@ def process_pdf(pdf_path):
                     f"{page_number + 1}: {e}"
                 )
 
+
     pdf.close()
+
 
     # ========================================================
     # CONVERT EMBEDDINGS TO NUMPY MATRIX
@@ -420,52 +414,101 @@ def process_pdf(pdf_path):
 
 
 # ============================================================
-# 8. CREATE FAISS VECTOR STORE
+# 8. CREATE SEPARATE FAISS VECTOR STORES
 # ============================================================
 
-def create_vector_store(
+def create_vector_stores(
     all_docs,
     embeddings_array
 ):
 
     print(
-        "\nCreating FAISS vector store..."
+        "\nCreating separate FAISS vector stores..."
     )
 
-    # FAISS receives:
-    #
-    # (text, embedding)
-    #
-    # for every document.
+    text_embeddings = []
+    text_metadatas = []
 
-    text_embeddings = [
-        (
-            doc.page_content,
-            embedding
-        )
-        for doc, embedding
-        in zip(
-            all_docs,
-            embeddings_array
-        )
-    ]
+    image_embeddings = []
+    image_metadatas = []
 
-    metadatas = [
-        doc.metadata
-        for doc in all_docs
-    ]
 
-    vector_store = FAISS.from_embeddings(
+    # ========================================================
+    # SEPARATE TEXT AND IMAGE DOCUMENTS
+    # ========================================================
+
+    for doc, embedding in zip(
+        all_docs,
+        embeddings_array
+    ):
+
+        if doc.metadata.get("type") == "text":
+
+            text_embeddings.append(
+                (
+                    doc.page_content,
+                    embedding
+                )
+            )
+
+            text_metadatas.append(
+                doc.metadata
+            )
+
+        elif doc.metadata.get("type") == "image":
+
+            image_embeddings.append(
+                (
+                    doc.page_content,
+                    embedding
+                )
+            )
+
+            image_metadatas.append(
+                doc.metadata
+            )
+
+
+    # ========================================================
+    # TEXT FAISS
+    # ========================================================
+
+    text_store = FAISS.from_embeddings(
         text_embeddings=text_embeddings,
         embedding=None,
-        metadatas=metadatas
+        metadatas=text_metadatas
+    )
+
+
+    # ========================================================
+    # IMAGE FAISS
+    # ========================================================
+
+    image_store = FAISS.from_embeddings(
+        text_embeddings=image_embeddings,
+        embedding=None,
+        metadatas=image_metadatas
+    )
+
+
+    print(
+        f"Text FAISS documents: "
+        f"{len(text_embeddings)}"
     )
 
     print(
-        "FAISS vector store created."
+        f"Image FAISS documents: "
+        f"{len(image_embeddings)}"
     )
 
-    return vector_store
+    print(
+        "Separate FAISS vector stores created."
+    )
+
+    return (
+        text_store,
+        image_store
+    )
 
 
 # ============================================================
@@ -475,9 +518,6 @@ def create_vector_store(
 print(
     "\nLoading Gemini..."
 )
-
-# CHANGED FROM ORIGINAL NOTEBOOK:
-# GPT-4.1 → Gemini
 
 llm = ChatGoogleGenerativeAI(
     model=GEMINI_MODEL_NAME,
@@ -496,27 +536,52 @@ print(
 
 def retrieve_multimodal(
     query,
-    vector_store,
-    k=TOP_K
+    text_vector_store,
+    image_vector_store,
+    text_k=5,
+    image_k=5
 ):
 
-    # Convert user's query into CLIP embedding
+    # ========================================================
+    # CREATE QUERY EMBEDDING
+    # ========================================================
 
     query_embedding = embed_text(
         query
     )
 
-    # Search FAISS
 
-    results = (
-        vector_store
+    # ========================================================
+    # TEXT RETRIEVAL
+    # ========================================================
+
+    text_docs = (
+        text_vector_store
         .similarity_search_by_vector(
             query_embedding,
-            k=k
+            k=text_k
         )
     )
 
-    return results
+
+    # ========================================================
+    # IMAGE RETRIEVAL
+    # ========================================================
+
+    image_docs = (
+        image_vector_store
+        .similarity_search_by_vector(
+            query_embedding,
+            k=image_k
+        )
+    )
+
+
+    # ========================================================
+    # COMBINE
+    # ========================================================
+
+    return text_docs + image_docs
 
 
 # ============================================================
@@ -531,6 +596,7 @@ def create_multimodal_message(
 
     content = []
 
+
     # ========================================================
     # USER QUESTION
     # ========================================================
@@ -543,6 +609,7 @@ def create_multimodal_message(
             "from the PDF to answer the question."
         )
     })
+
 
     # ========================================================
     # SEPARATE TEXT AND IMAGE RESULTS
@@ -559,6 +626,7 @@ def create_multimodal_message(
         for doc in retrieved_docs
         if doc.metadata.get("type") == "image"
     ]
+
 
     # ========================================================
     # ADD TEXT CONTEXT
@@ -585,6 +653,7 @@ def create_multimodal_message(
                     f"{doc.page_content}\n"
                 )
             })
+
 
     # ========================================================
     # ADD RETRIEVED IMAGES
@@ -623,6 +692,7 @@ def create_multimodal_message(
                 }
             })
 
+
     # ========================================================
     # INSTRUCTION
     # ========================================================
@@ -640,6 +710,7 @@ def create_multimodal_message(
         )
     })
 
+
     return HumanMessage(
         content=content
     )
@@ -651,7 +722,8 @@ def create_multimodal_message(
 
 def multimodal_rag(
     query,
-    vector_store,
+    text_vector_store,
+    image_vector_store,
     image_data_store
 ):
 
@@ -661,9 +733,12 @@ def multimodal_rag(
 
     retrieved_docs = retrieve_multimodal(
         query,
-        vector_store,
-        TOP_K
+        text_vector_store,
+        image_vector_store,
+        text_k=TEXT_TOP_K,
+        image_k=IMAGE_TOP_K
     )
+
 
     # ========================================================
     # SHOW RETRIEVED RESULTS
@@ -688,6 +763,7 @@ def multimodal_rag(
             "unknown"
         )
 
+
         if doc_type == "text":
 
             preview = (
@@ -709,6 +785,7 @@ def multimodal_rag(
                 f"{preview}"
             )
 
+
         elif doc_type == "image":
 
             image_id = doc.metadata.get(
@@ -722,6 +799,7 @@ def multimodal_rag(
                 f"{image_id}"
             )
 
+
     # ========================================================
     # CREATE MULTIMODAL MESSAGE
     # ========================================================
@@ -732,37 +810,57 @@ def multimodal_rag(
         image_data_store
     )
 
+
     # ========================================================
     # SEND TO GEMINI
     # ========================================================
 
     response = llm.invoke(
-    [message]
-)
+        [message]
+    )
 
-# CHANGED:
-# Gemini may return the response as a list of content blocks.
-# Extract only the actual text.
 
-    if isinstance(response.content, list):
+    # Gemini may return the response as a
+    # list of content blocks.
 
-      text_parts = []
+    if isinstance(
+        response.content,
+        list
+    ):
 
-      for block in response.content:
+        text_parts = []
 
-        if isinstance(block, dict):
+        for block in response.content:
 
-            if block.get("type") == "text":
+            if isinstance(
+                block,
+                dict
+            ):
+
+                if block.get(
+                    "type"
+                ) == "text":
+
+                    text_parts.append(
+                        block.get(
+                            "text",
+                            ""
+                        )
+                    )
+
+            elif isinstance(
+                block,
+                str
+            ):
 
                 text_parts.append(
-                    block.get("text", "")
+                    block
                 )
 
-        elif isinstance(block, str):
+        return "\n".join(
+            text_parts
+        )
 
-            text_parts.append(block)
-
-      return "\n".join(text_parts)
 
     return response.content
 
@@ -778,6 +876,7 @@ def main():
     print("MULTIMODAL PDF RAG")
     print("=" * 70)
 
+
     # ========================================================
     # PROCESS PDF
     # ========================================================
@@ -790,14 +889,19 @@ def main():
         PDF_PATH
     )
 
+
     # ========================================================
-    # CREATE VECTOR STORE
+    # CREATE SEPARATE VECTOR STORES
     # ========================================================
 
-    vector_store = create_vector_store(
+    (
+        text_vector_store,
+        image_vector_store
+    ) = create_vector_stores(
         all_docs,
         embeddings_array
     )
+
 
     # ========================================================
     # SYSTEM READY
@@ -816,6 +920,7 @@ def main():
         "Type 'exit' to stop."
     )
 
+
     # ========================================================
     # INTERACTIVE LOOP
     # ========================================================
@@ -826,6 +931,7 @@ def main():
             "\nYou: "
         ).strip()
 
+
         if query.lower() == "exit":
 
             print(
@@ -834,15 +940,18 @@ def main():
 
             break
 
+
         if not query:
 
             continue
+
 
         try:
 
             answer = multimodal_rag(
                 query,
-                vector_store,
+                text_vector_store,
+                image_vector_store,
                 image_data_store
             )
 
@@ -850,7 +959,10 @@ def main():
                 "\nGemini:"
             )
 
-            print(answer)
+            print(
+                answer
+            )
+
 
         except Exception as e:
 
@@ -858,7 +970,9 @@ def main():
                 "\nError:"
             )
 
-            print(e)
+            print(
+                e
+            )
 
 
 # ============================================================
