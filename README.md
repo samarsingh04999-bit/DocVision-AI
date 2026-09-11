@@ -1,73 +1,102 @@
-# Multimodal RAG System
+# DocVision AI — Multimodal RAG
 
-A multimodal Retrieval-Augmented Generation (RAG) system for querying PDF documents using text and image information.
+A multimodal Retrieval-Augmented Generation (RAG) system for querying PDF documents using both text and image information.
+
+## Overview
+
+DocVision AI processes PDF documents, extracts text and images, generates multimodal embeddings using CLIP, retrieves relevant content using FAISS, and uses Google Gemini to generate grounded answers.
+
+The project was developed iteratively from a V1 baseline to V2 with improved multimodal retrieval.
 
 ## Features
 
-- PDF document processing
-- Text extraction and chunking
-- Image extraction
-- CLIP-based embeddings
+- PDF text and image extraction using PyMuPDF
+- Text chunking with LangChain
+- CLIP-based text and image embeddings
 - FAISS vector similarity search
-- Gemini-powered answer generation
+- Separate text and image retrieval
+- Multimodal context construction
+- Gemini-powered document Q&A
 - Streamlit interface
-- Automated evaluation pipeline
+- Automated 30-question evaluation pipeline
 
 ## Architecture
 
-PDF
-↓
-PyMuPDF
-↓
-Text + Image Extraction
-↓
-Text Chunking
-↓
-CLIP Embeddings
-↓
-FAISS
-↓
-Top-K Retrieval
-↓
-Gemini
-↓
-Answer
+```text
+                    PDF
+                     ↓
+                  PyMuPDF
+                     ↓
+             Text + Images
+                     ↓
+               CLIP Embeddings
+                     ↓
+          ┌──────────┴──────────┐
+          ↓                     ↓
+     Text FAISS            Image FAISS
+          ↓                     ↓
+       Top-5                  Top-5
+          └──────────┬──────────┘
+                     ↓
+             Multimodal Context
+                     ↓
+               Google Gemini
+                     ↓
+                  Answer
+V1 — Baseline
 
-## Tech Stack
+V1 used a unified FAISS index for text and image embeddings.
 
-- Python
-- LangChain
-- PyMuPDF
-- Hugging Face
-- CLIP
-- FAISS
-- Google Gemini
-- Streamlit
+Metric	V1
+Top-K	5
+Retrieval Accuracy	80%
+Answer Accuracy	65.5%
+Image Retrieval Accuracy	0%
+Retrieval Latency	39.5 ms
+End-to-End Latency	1.25 s
+V1 Limitation
 
-## Current Version
+The main limitation was poor image retrieval. Relevant images were not being retrieved reliably for image-based queries.
 
-V1 — Baseline Multimodal RAG
+V2 — Improved Multimodal Retrieval
 
-### V1 Baseline
+V2 introduced separate FAISS indexes for text and images.
 
-- Top-K: 5
-- Top-5 Retrieval Accuracy: 80%
-- Answer Accuracy: 65.5%
-- Image Retrieval Accuracy: 0%
-- Average Retrieval Time: 39.5 ms
-- Average Generation Time: 1.21 s
-- Average End-to-End Latency: 1.25 s
+Text Top-K: 5
+Image Top-K: 5
+Improved multimodal retrieval coverage
+Dedicated evaluation pipeline
+Retrieval and generation latency measurement
+V2 Results
+Metric	V1	V2
+Answer Accuracy	65.5%	~73.3%
+Image Retrieval	0%	100%*
+Retrieval Latency	39.5 ms	49.7 ms
 
-## Future Improvements
+*V2 image retrieval measures whether an image was retrieved for image/multimodal questions, not whether every retrieved image was the correct relevant image.
 
-### V2
-- Improved multimodal retrieval
-- Hybrid text + image retrieval
-- Candidate expansion
-- Reranking
+Tech Stack
 
-### V3
-- Cloud vector database
-- Scalable document processing
-- LangSmith evaluation and tracing
-- Production deployment
+Python · LangChain · PyMuPDF · Hugging Face CLIP · FAISS · Google Gemini · Streamlit
+
+Project Structure
+DocVision-AI/
+├── app.py
+├── streamlit_app.py
+├── requirements.txt
+├── README.md
+└── evaluation/
+    ├── evaluate.py
+    └── questions.json
+V3 — Next Steps
+
+The next version will focus on improving retrieval quality and moving toward a production-ready architecture.
+
+Reranking retrieved candidates
+Recall@K / Precision@K evaluation
+Cloud vector database
+FastAPI backend
+LangSmith tracing and evaluation
+Scalable document processing
+Production deployment
+
