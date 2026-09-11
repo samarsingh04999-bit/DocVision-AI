@@ -3,5 +3,5 @@ venv/
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
-evaluation/results.json
+evaluation/results*.json
 data/*.pdf
